@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Share2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Share2, Award, Users } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -14,6 +15,8 @@ interface Profile {
   matchPercentage: number;
   topBeliefs: string[];
   opposingViews: string[];
+  elo?: number;
+  xp?: number;
 }
 
 interface Message {
@@ -62,6 +65,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ profile, onBack }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [quotedMessage, setQuotedMessage] = useState<Message | null>(null);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showEndDebateDialog, setShowEndDebateDialog] = useState(false);
+  const [userAgreedToEnd, setUserAgreedToEnd] = useState(false);
+  const [opponentAgreedToEnd, setOpponentAgreedToEnd] = useState(false);
+  const [debateType, setDebateType] = useState<'private' | 'public' | null>(null);
+  const [votingDuration, setVotingDuration] = useState<number>(24);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -157,6 +165,34 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ profile, onBack }) => {
     setShowShareMenu(false);
   };
 
+  const handleEndDebateRequest = () => {
+    setUserAgreedToEnd(true);
+    setShowEndDebateDialog(true);
+    // In a real app, this would send a request to the opponent
+    // For demo purposes, we'll simulate opponent agreement after 2 seconds
+    setTimeout(() => {
+      setOpponentAgreedToEnd(true);
+    }, 2000);
+  };
+
+  const handleDebateConclusion = (type: 'private' | 'public', duration?: number) => {
+    setDebateType(type);
+    if (type === 'public' && duration) {
+      setVotingDuration(duration);
+    }
+    
+    // In a real app, this would:
+    // 1. Close the debate
+    // 2. If public, open it for voting
+    // 3. Update user ELO/XP after voting period
+    
+    console.log(`Debate concluded as ${type}${type === 'public' ? ` for ${duration} hours` : ''}`);
+    setShowEndDebateDialog(false);
+    
+    // Show success message
+    alert(`Debate ended and marked as ${type}${type === 'public' ? `. Voting will be open for ${duration} hours.` : '.'}`);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Chat Header */}
@@ -176,75 +212,168 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ profile, onBack }) => {
               </div>
               <div>
                 <h2 className="font-semibold text-gray-900">{profile.name}</h2>
-                <Badge variant="destructive" className="text-xs">
-                  {profile.matchPercentage}% Opposite
-                </Badge>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="destructive" className="text-xs">
+                    {profile.matchPercentage}% Opposite
+                  </Badge>
+                  {profile.elo && (
+                    <Badge variant="outline" className="text-xs">
+                      ELO: {profile.elo}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="relative">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowShareMenu(!showShareMenu)}
-                className="p-2"
-              >
-                <Share2 className="w-5 h-5" />
-              </Button>
-              
-              {/* Share Menu */}
-              {showShareMenu && (
-                <div className="absolute right-0 top-12 bg-white border rounded-lg shadow-lg p-2 z-10 min-w-40">
-                  <div className="text-xs text-gray-600 mb-2 px-2">Share conversation</div>
+            <div className="flex items-center space-x-2">
+              {/* End Debate Button */}
+              <Dialog open={showEndDebateDialog} onOpenChange={setShowEndDebateDialog}>
+                <DialogTrigger asChild>
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    onClick={() => handleShare('whatsapp')}
-                    className="w-full justify-start text-left"
+                    onClick={handleEndDebateRequest}
+                    className="p-2"
                   >
-                    WhatsApp
+                    <Award className="w-5 h-5" />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleShare('telegram')}
-                    className="w-full justify-start text-left"
-                  >
-                    Telegram
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleShare('facebook')}
-                    className="w-full justify-start text-left"
-                  >
-                    Facebook
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleShare('twitter')}
-                    className="w-full justify-start text-left"
-                  >
-                    Twitter
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleShare('instagram')}
-                    className="w-full justify-start text-left"
-                  >
-                    Instagram
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleShare('copy')}
-                    className="w-full justify-start text-left"
-                  >
-                    Copy Link
-                  </Button>
-                </div>
-              )}
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>End Debate</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {!userAgreedToEnd ? (
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600 mb-4">
+                          Do you want to end this debate?
+                        </p>
+                        <Button onClick={handleEndDebateRequest} className="w-full">
+                          Request to End Debate
+                        </Button>
+                      </div>
+                    ) : !opponentAgreedToEnd ? (
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600 mb-4">
+                          Waiting for {profile.name} to agree to end the debate...
+                        </p>
+                        <div className="animate-pulse">⏳</div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <p className="text-sm text-gray-600 text-center">
+                          Both parties agreed to end the debate. Choose how to conclude:
+                        </p>
+                        
+                        <div className="space-y-3">
+                          <Button 
+                            variant="outline" 
+                            className="w-full justify-start"
+                            onClick={() => handleDebateConclusion('private')}
+                          >
+                            <Users className="w-4 h-4 mr-2" />
+                            Keep Private
+                            <span className="text-xs text-gray-500 ml-auto">Only you can see it</span>
+                          </Button>
+                          
+                          <div className="space-y-2">
+                            <Button 
+                              variant="outline" 
+                              className="w-full justify-start"
+                              onClick={() => handleDebateConclusion('public', votingDuration)}
+                            >
+                              <Award className="w-4 h-4 mr-2" />
+                              Make Public for Voting
+                              <span className="text-xs text-gray-500 ml-auto">Gain/lose ELO</span>
+                            </Button>
+                            
+                            <div className="flex items-center space-x-2 px-3">
+                              <label className="text-xs text-gray-600">Voting duration:</label>
+                              <select 
+                                value={votingDuration} 
+                                onChange={(e) => setVotingDuration(Number(e.target.value))}
+                                className="text-xs border rounded px-2 py-1"
+                              >
+                                <option value={6}>6 hours</option>
+                                <option value={12}>12 hours</option>
+                                <option value={24}>24 hours</option>
+                                <option value={48}>48 hours</option>
+                                <option value={72}>72 hours</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Share Button */}
+              <div className="relative">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowShareMenu(!showShareMenu)}
+                  className="p-2"
+                >
+                  <Share2 className="w-5 h-5" />
+                </Button>
+                
+                {/* Share Menu */}
+                {showShareMenu && (
+                  <div className="absolute right-0 top-12 bg-white border rounded-lg shadow-lg p-2 z-10 min-w-40">
+                    <div className="text-xs text-gray-600 mb-2 px-2">Share conversation</div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleShare('whatsapp')}
+                      className="w-full justify-start text-left"
+                    >
+                      WhatsApp
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleShare('telegram')}
+                      className="w-full justify-start text-left"
+                    >
+                      Telegram
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleShare('facebook')}
+                      className="w-full justify-start text-left"
+                    >
+                      Facebook
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleShare('twitter')}
+                      className="w-full justify-start text-left"
+                    >
+                      Twitter
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleShare('instagram')}
+                      className="w-full justify-start text-left"
+                    >
+                      Instagram
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleShare('copy')}
+                      className="w-full justify-start text-left"
+                    >
+                      Copy Link
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardHeader>

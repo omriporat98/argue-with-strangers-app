@@ -17,6 +17,11 @@ interface Profile {
   matchPercentage: number;
   topBeliefs: string[];
   opposingViews: string[];
+  elo?: number;
+  xp?: number;
+  totalDebates?: number;
+  wins?: number;
+  losses?: number;
 }
 
 const Index = () => {
