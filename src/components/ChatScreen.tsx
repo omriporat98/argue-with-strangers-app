@@ -1,9 +1,9 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Share2 } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -61,6 +61,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ profile, onBack }) => {
   const [newMessage, setNewMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [quotedMessage, setQuotedMessage] = useState<Message | null>(null);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -110,6 +111,52 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ profile, onBack }) => {
     setQuotedMessage(null);
   };
 
+  const generateShareText = () => {
+    const conversationText = messages
+      .map(msg => `${msg.sender === 'user' ? 'Me' : profile.name}: ${msg.text}`)
+      .join('\n\n');
+    
+    return `🔥 Check out this heated debate I'm having with ${profile.name} (${profile.matchPercentage}% opposite views)!\n\n${conversationText}\n\nJoin the debate at [App Name]`;
+  };
+
+  const handleShare = (platform: string) => {
+    const shareText = generateShareText();
+    const encodedText = encodeURIComponent(shareText);
+    
+    let shareUrl = '';
+    
+    switch (platform) {
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodedText}`;
+        break;
+      case 'telegram':
+        shareUrl = `https://t.me/share/url?text=${encodedText}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?quote=${encodedText}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodedText}`;
+        break;
+      case 'instagram':
+        // Instagram doesn't support direct URL sharing, so we'll copy to clipboard
+        navigator.clipboard.writeText(shareText);
+        alert('Conversation copied to clipboard! You can now paste it on Instagram.');
+        setShowShareMenu(false);
+        return;
+      case 'copy':
+        navigator.clipboard.writeText(shareText);
+        alert('Conversation copied to clipboard!');
+        setShowShareMenu(false);
+        return;
+    }
+    
+    if (shareUrl) {
+      window.open(shareUrl, '_blank');
+    }
+    setShowShareMenu(false);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Chat Header */}
@@ -134,7 +181,71 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ profile, onBack }) => {
                 </Badge>
               </div>
             </div>
-            <div className="w-10"></div>
+            <div className="relative">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowShareMenu(!showShareMenu)}
+                className="p-2"
+              >
+                <Share2 className="w-5 h-5" />
+              </Button>
+              
+              {/* Share Menu */}
+              {showShareMenu && (
+                <div className="absolute right-0 top-12 bg-white border rounded-lg shadow-lg p-2 z-10 min-w-40">
+                  <div className="text-xs text-gray-600 mb-2 px-2">Share conversation</div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleShare('whatsapp')}
+                    className="w-full justify-start text-left"
+                  >
+                    WhatsApp
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleShare('telegram')}
+                    className="w-full justify-start text-left"
+                  >
+                    Telegram
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleShare('facebook')}
+                    className="w-full justify-start text-left"
+                  >
+                    Facebook
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleShare('twitter')}
+                    className="w-full justify-start text-left"
+                  >
+                    Twitter
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleShare('instagram')}
+                    className="w-full justify-start text-left"
+                  >
+                    Instagram
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleShare('copy')}
+                    className="w-full justify-start text-left"
+                  >
+                    Copy Link
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </CardHeader>
       </Card>
