@@ -21,12 +21,19 @@ interface Message {
   text: string;
   sender: 'user' | 'other';
   timestamp: Date;
+  quotedMessage?: {
+    id: string;
+    text: string;
+    sender: 'user' | 'other';
+  };
 }
 
 interface ChatScreenProps {
   profile: Profile;
   onBack: () => void;
 }
+
+const commonEmojis = ['😀', '😂', '🤔', '👍', '👎', '🔥', '💯', '🤝', '🙄', '😤', '💪', '🎯', '❤️', '💔', '🤷‍♂️', '😎'];
 
 const mockMessages: Message[] = [
   {
@@ -52,6 +59,8 @@ const mockMessages: Message[] = [
 const ChatScreen: React.FC<ChatScreenProps> = ({ profile, onBack }) => {
   const [messages, setMessages] = useState<Message[]>(mockMessages);
   const [newMessage, setNewMessage] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [quotedMessage, setQuotedMessage] = useState<Message | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -68,17 +77,37 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ profile, onBack }) => {
         id: Date.now().toString(),
         text: newMessage,
         sender: 'user',
-        timestamp: new Date()
+        timestamp: new Date(),
+        quotedMessage: quotedMessage ? {
+          id: quotedMessage.id,
+          text: quotedMessage.text,
+          sender: quotedMessage.sender
+        } : undefined
       };
       setMessages(prev => [...prev, message]);
       setNewMessage('');
+      setQuotedMessage(null);
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleEmojiClick = (emoji: string) => {
+    setNewMessage(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const handleQuoteMessage = (message: Message) => {
+    setQuotedMessage(message);
+  };
+
+  const cancelQuote = () => {
+    setQuotedMessage(null);
   };
 
   return (
@@ -118,12 +147,28 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ profile, onBack }) => {
             className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl relative group ${
                 message.sender === 'user'
                   ? 'bg-red-500 text-white'
                   : 'bg-white text-gray-900 shadow-sm'
               }`}
             >
+              {/* Quote indicator */}
+              {message.quotedMessage && (
+                <div className={`mb-2 p-2 rounded border-l-4 text-xs ${
+                  message.sender === 'user' 
+                    ? 'bg-red-400 border-red-200 text-red-100' 
+                    : 'bg-gray-100 border-gray-300 text-gray-600'
+                }`}>
+                  <div className="font-semibold">
+                    {message.quotedMessage.sender === 'user' ? 'You' : profile.name}:
+                  </div>
+                  <div className="italic">"{message.quotedMessage.text.length > 50 
+                    ? message.quotedMessage.text.substring(0, 50) + '...' 
+                    : message.quotedMessage.text}"</div>
+                </div>
+              )}
+              
               <p className="text-sm">{message.text}</p>
               <p
                 className={`text-xs mt-1 ${
@@ -132,16 +177,76 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ profile, onBack }) => {
               >
                 {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>
+              
+              {/* Quote button for opponent messages */}
+              {message.sender === 'other' && (
+                <Button
+                  onClick={() => handleQuoteMessage(message)}
+                  variant="ghost"
+                  size="sm"
+                  className="absolute -right-2 top-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200 hover:bg-gray-300 text-gray-600 text-xs px-2 py-1"
+                >
+                  Quote
+                </Button>
+              )}
             </div>
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Quote preview */}
+      {quotedMessage && (
+        <div className="px-4 py-2 bg-gray-200 border-t">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="text-xs text-gray-600 font-semibold">
+                Replying to {quotedMessage.sender === 'user' ? 'yourself' : profile.name}:
+              </div>
+              <div className="text-sm text-gray-700 italic">
+                "{quotedMessage.text.length > 80 
+                  ? quotedMessage.text.substring(0, 80) + '...' 
+                  : quotedMessage.text}"
+              </div>
+            </div>
+            <Button onClick={cancelQuote} variant="ghost" size="sm" className="text-gray-500">
+              ✕
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Emoji Picker */}
+      {showEmojiPicker && (
+        <div className="px-4 py-2 bg-white border-t">
+          <div className="grid grid-cols-8 gap-2">
+            {commonEmojis.map((emoji) => (
+              <Button
+                key={emoji}
+                onClick={() => handleEmojiClick(emoji)}
+                variant="ghost"
+                size="sm"
+                className="text-lg hover:bg-gray-100"
+              >
+                {emoji}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Message Input */}
       <Card className="rounded-none border-t">
         <CardContent className="p-4">
           <div className="flex space-x-2">
+            <Button
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              variant="ghost"
+              size="sm"
+              className="text-xl"
+            >
+              😀
+            </Button>
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
