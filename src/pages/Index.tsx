@@ -35,28 +35,7 @@ const Index = () => {
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [currentMatch, setCurrentMatch] = useState<Profile | null>(null);
 
-  // Show loading screen while checking auth
-  if (authLoading || (user && profileLoading)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
-          <p className="text-white">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show auth screen if not logged in
-  if (!user) {
-    return <AuthScreen />;
-  }
-
-  // Show onboarding if profile needs completion
-  if (profile && (!profile.age || !profile.location)) {
-    return <OnboardingScreen onComplete={handleOnboardingComplete} />;
-  }
-
+  // Define all handler functions first
   const handleGetStarted = () => {
     setCurrentScreen('onboarding');
   };
@@ -89,6 +68,28 @@ const Index = () => {
   const handleBackToSwiping = () => {
     setCurrentScreen('swiping');
   };
+
+  // Show loading screen while checking auth
+  if (authLoading || (user && profileLoading)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
+          <p className="text-white">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth screen if not logged in
+  if (!user) {
+    return <AuthScreen />;
+  }
+
+  // Show onboarding if profile needs completion
+  if (profile && (!profile.age || !profile.location)) {
+    return <OnboardingScreen onComplete={handleOnboardingComplete} />;
+  }
 
   return (
     <div className="min-h-screen">
