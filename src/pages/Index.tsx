@@ -1,10 +1,14 @@
 
 import React, { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import AuthScreen from '@/components/AuthScreen';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import OnboardingScreen from '@/components/OnboardingScreen';
 import SwipingScreen from '@/components/SwipingScreen';
 import MatchScreen from '@/components/MatchScreen';
 import ChatScreen from '@/components/ChatScreen';
+import { Loader2 } from 'lucide-react';
 
 type Screen = 'welcome' | 'onboarding' | 'swiping' | 'match' | 'chat';
 
@@ -25,15 +29,39 @@ interface Profile {
 }
 
 const Index = () => {
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
   const [currentScreen, setCurrentScreen] = useState<Screen>('welcome');
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [currentMatch, setCurrentMatch] = useState<Profile | null>(null);
+
+  // Show loading screen while checking auth
+  if (authLoading || (user && profileLoading)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
+          <p className="text-white">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth screen if not logged in
+  if (!user) {
+    return <AuthScreen />;
+  }
+
+  // Show onboarding if profile needs completion
+  if (profile && (!profile.age || !profile.location)) {
+    return <OnboardingScreen onComplete={handleOnboardingComplete} />;
+  }
 
   const handleGetStarted = () => {
     setCurrentScreen('onboarding');
   };
 
-  const handleOnboardingComplete = (answers: Record<string, string>) => {
+  const handleOnboardingComplete = async (answers: Record<string, string>) => {
     setUserAnswers(answers);
     console.log('User answers:', answers);
     setCurrentScreen('swiping');
