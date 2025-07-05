@@ -30,7 +30,7 @@ interface Profile {
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, loading: profileLoading, updateProfile } = useProfile();
   const [currentScreen, setCurrentScreen] = useState<Screen>('welcome');
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [currentMatch, setCurrentMatch] = useState<Profile | null>(null);
@@ -43,6 +43,19 @@ const Index = () => {
   const handleOnboardingComplete = async (answers: Record<string, string>) => {
     setUserAnswers(answers);
     console.log('User answers:', answers);
+    
+    // Update the user profile with some basic info if needed
+    if (profile && updateProfile) {
+      try {
+        await updateProfile({
+          age: profile.age || 25, // Default age if not set
+          location: profile.location || 'Unknown' // Default location if not set
+        });
+      } catch (error) {
+        console.error('Error updating profile:', error);
+      }
+    }
+    
     setCurrentScreen('swiping');
   };
 
@@ -86,8 +99,8 @@ const Index = () => {
     return <AuthScreen />;
   }
 
-  // Show onboarding if profile needs completion
-  if (profile && (!profile.age || !profile.location)) {
+  // Show onboarding if profile needs completion AND we're not already past onboarding
+  if (profile && (!profile.age || !profile.location) && currentScreen === 'welcome') {
     return <OnboardingScreen onComplete={handleOnboardingComplete} />;
   }
 
